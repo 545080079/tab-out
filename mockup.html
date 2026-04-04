@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1613;
+    --paper: #f8f5f0;
+    --warm-gray: #e8e2da;
+    --muted: #9a918a;
+    --accent-amber: #c8713a;
+    --accent-sage: #5a7a62;
+    --accent-slate: #5a6b7a;
+    --accent-rose: #b35a5a;
+    --status-active: #3d7a4a;
+    --status-cooling: #b8892e;
+    --status-abandoned: #b35a5a;
+    --card-bg: #fffdf9;
+    --shadow: rgba(26, 22, 19, 0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* ---- Header ---- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--warm-gray);
+  }
+
+  .header-left h1 {
+    font-family: 'Newsreader', serif;
+    font-weight: 300;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .header-left .date {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .scatter-meter {
+    text-align: right;
+  }
+
+  .scatter-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .scatter-bar {
+    display: flex;
+    gap: 3px;
+    justify-content: flex-end;
+    margin-bottom: 6px;
+  }
+
+  .scatter-dot {
+    width: 8px;
+    height: 24px;
+    border-radius: 2px;
+    background: var(--warm-gray);
+    transition: background 0.3s;
+  }
+
+  .scatter-dot.filled { background: var(--accent-amber); }
+  .scatter-dot.filled.high { background: var(--status-abandoned); }
+
+  .scatter-caption {
+    font-size: 12px;
+    color: var(--accent-amber);
+    font-weight: 500;
+  }
+
+  /* ---- Tab cleanup banner ---- */
+  .tab-cleanup-banner {
+    background: linear-gradient(135deg, rgba(200, 113, 58, 0.04), rgba(200, 113, 58, 0.09));
+    border: 1px solid rgba(200, 113, 58, 0.18);
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .tab-cleanup-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .tab-cleanup-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(200, 113, 58, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .tab-cleanup-icon svg {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-amber);
+  }
+
+  .tab-cleanup-text {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .tab-cleanup-text strong {
+    font-weight: 600;
+  }
+
+  .tab-cleanup-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent-amber);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab-cleanup-btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  /* ---- Nudge banner ---- */
+  .nudge-banner {
+    background: linear-gradient(135deg, rgba(179, 90, 90, 0.04), rgba(179, 90, 90, 0.08));
+    border: 1px solid rgba(179, 90, 90, 0.15);
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .nudge-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(179, 90, 90, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .nudge-icon svg {
+    width: 18px;
+    height: 18px;
+    color: var(--status-abandoned);
+  }
+
+  .nudge-text {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .nudge-text strong {
+    font-weight: 600;
+  }
+
+  /* ---- Section Headers ---- */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    margin-top: 8px;
+  }
+
+  .section-header h2 {
+    font-family: 'Newsreader', serif;
+    font-weight: 400;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--warm-gray);
+  }
+
+  .section-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* ---- Mission Cards ---- */
+  .missions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .mission-card {
+    background: var(--card-bg);
+    border: 1px solid var(--warm-gray);
+    border-radius: 8px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 4px 1fr auto;
+    gap: 0 20px;
+    align-items: start;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    cursor: pointer;
+  }
+
+  .mission-card:hover {
+    box-shadow: 0 4px 20px var(--shadow);
+    transform: translateY(-1px);
+  }
+
+  /* Closing animation */
+  .mission-card.closing {
+    animation: cardClose 0.4s ease forwards;
+  }
+
+  @keyframes cardClose {
+    0% { opacity: 1; transform: translateY(0) scale(1); max-height: 200px; }
+    50% { opacity: 0.5; transform: translateY(-4px) scale(0.98); }
+    100% { opacity: 0; transform: translateY(-8px) scale(0.96); max-height: 0; padding: 0 24px; margin-bottom: 0; overflow: hidden; }
+  }
+
+  .status-bar {
+    width: 4px;
+    height: 100%;
+    min-height: 48px;
+    border-radius: 2px;
+    align-self: stretch;
+  }
+
+  .status-bar.active { background: var(--status-active); }
+  .status-bar.cooling { background: var(--status-cooling); }
+  .status-bar.abandoned { background: var(--status-abandoned); }
+
+  .mission-content {
+    min-width: 0;
+  }
+
+  .mission-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mission-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+  }
+
+  .mission-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .mission-tag.active {
+    color: var(--status-active);
+    background: rgba(61, 122, 74, 0.08);
+  }
+
+  .mission-tag.cooling {
+    color: var(--status-cooling);
+    background: rgba(184, 137, 46, 0.08);
+  }
+
+  .mission-tag.abandoned {
+    color: var(--status-abandoned);
+    background: rgba(179, 90, 90, 0.08);
+  }
+
+  /* Tab indicator badge — shows how many Chrome tabs are still open for this mission */
+  .open-tabs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--accent-amber);
+    background: rgba(200, 113, 58, 0.08);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .open-tabs-badge svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .mission-summary {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .mission-pages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .page-chip {
+    font-size: 11px;
+    color: var(--muted);
+    background: rgba(154, 145, 138, 0.08);
+    padding: 3px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+    border: 1px solid rgba(154, 145, 138, 0.12);
+  }
+
+  .mission-meta {
+    text-align: right;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+
+  .mission-time {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .mission-page-count {
+    font-size: 20px;
+    font-family: 'Newsreader', serif;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .mission-page-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ---- Actions row ---- */
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .action-btn {
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--warm-gray);
+    background: var(--card-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .action-btn:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .action-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .action-btn.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .action-btn.primary:hover {
+    opacity: 0.85;
+  }
+
+  .action-btn.close-tabs {
+    border-color: rgba(200, 113, 58, 0.3);
+    color: var(--accent-amber);
+    background: rgba(200, 113, 58, 0.04);
+  }
+
+  .action-btn.close-tabs:hover {
+    background: rgba(200, 113, 58, 0.1);
+    border-color: var(--accent-amber);
+  }
+
+  .action-btn.danger {
+    color: var(--status-abandoned);
+  }
+
+  .action-btn.danger:hover {
+    border-color: var(--status-abandoned);
+    color: var(--status-abandoned);
+  }
+
+  /* ---- Toast notification ---- */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast svg {
+    width: 16px;
+    height: 16px;
+    color: var(--status-active);
+  }
+
+  /* ---- Footer ---- */
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--warm-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-stats {
+    display: flex;
+    gap: 32px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Newsreader', serif;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1;
+    transition: all 0.3s;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .last-refresh {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .refresh-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent-amber);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* ---- Animations ---- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  header { animation: fadeUp 0.5s ease both; }
+  .tab-cleanup-banner { animation: fadeUp 0.5s ease 0.1s both; }
+  .nudge-banner { animation: fadeUp 0.5s ease 0.15s both; }
+  .active-section .section-header { animation: fadeUp 0.5s ease 0.2s both; }
+  .active-section .missions .mission-card:nth-child(1) { animation: fadeUp 0.4s ease 0.25s both; }
+  .active-section .missions .mission-card:nth-child(2) { animation: fadeUp 0.4s ease 0.3s both; }
+  .active-section .missions .mission-card:nth-child(3) { animation: fadeUp 0.4s ease 0.35s both; }
+  .active-section .missions .mission-card:nth-child(4) { animation: fadeUp 0.4s ease 0.4s both; }
+  .abandoned-section .section-header { animation: fadeUp 0.5s ease 0.45s both; }
+  .abandoned-section .missions .mission-card:nth-child(1) { animation: fadeUp 0.4s ease 0.5s both; }
+  .abandoned-section .missions .mission-card:nth-child(2) { animation: fadeUp 0.4s ease 0.55s both; }
+  .abandoned-section .missions .mission-card:nth-child(3) { animation: fadeUp 0.4s ease 0.6s both; }
+  footer { animation: fadeUp 0.5s ease 0.65s both; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <h1>Good afternoon, Zara</h1>
+      <div class="date">Friday, April 4, 2026</div>
+    </div>
+    <div class="scatter-meter">
+      <div class="scatter-label">Focus level</div>
+      <div class="scatter-bar">
+        <div class="scatter-dot filled high"></div>
+        <div class="scatter-dot filled high"></div>
+        <div class="scatter-dot filled high"></div>
+        <div class="scatter-dot filled high"></div>
+        <div class="scatter-dot filled high"></div>
+        <div class="scatter-dot filled"></div>
+        <div class="scatter-dot filled"></div>
+        <div class="scatter-dot"></div>
+        <div class="scatter-dot"></div>
+        <div class="scatter-dot"></div>
+      </div>
+      <div class="scatter-caption">7 parallel missions &mdash; high scatter</div>
+    </div>
+  </header>
+
+  <!-- Tab cleanup banner -->
+  <div class="tab-cleanup-banner" id="cleanupBanner">
+    <div class="tab-cleanup-left">
+      <div class="tab-cleanup-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+        </svg>
+      </div>
+      <div class="tab-cleanup-text">
+        <strong id="staleTabCount">23 stale tabs</strong> are still open from finished or cold missions. Free up your browser?
+      </div>
+    </div>
+    <button class="tab-cleanup-btn" onclick="closeAllStale()">Close all stale tabs</button>
+  </div>
+
+  <!-- Nudge -->
+  <div class="nudge-banner">
+    <div class="nudge-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+      </svg>
+    </div>
+    <div class="nudge-text">
+      <strong>3 missions have gone cold.</strong> You started them but haven't been back in days. Pick one to finish, or let them go.
+    </div>
+  </div>
+
+  <!-- Active Missions -->
+  <div class="active-section">
+    <div class="section-header">
+      <h2>Active today</h2>
+      <div class="section-line"></div>
+      <div class="section-count">4 missions</div>
+    </div>
+
+    <div class="missions">
+      <!-- Mission 1: USCIS -->
+      <div class="mission-card" id="mission-uscis">
+        <div class="status-bar active"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">USCIS Immigration Application</span>
+            <span class="mission-tag active">Active</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              3 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Checking e-Request status repeatedly throughout the day. You've visited this 340 times total &mdash; clearly waiting on something important.</div>
+          <div class="mission-pages">
+            <span class="page-chip">egov.uscis.gov/e-request</span>
+            <span class="page-chip">visa bulletin</span>
+            <span class="page-chip">uscis.gov/case-status</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn close-tabs" onclick="closeTabs(this, 'uscis', 3)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+              Close 3 tabs
+            </button>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">22 min ago</div>
+          <div class="mission-page-count">3</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+
+      <!-- Mission 2: Brand DNA -->
+      <div class="mission-card" id="mission-brand">
+        <div class="status-bar active"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">Brand DNA Tool</span>
+            <span class="mission-tag active">Active</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              2 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Building your brand identity extraction tool on localhost:5173. Visited 141 times &mdash; this is a core project.</div>
+          <div class="mission-pages">
+            <span class="page-chip">localhost:5173</span>
+            <span class="page-chip">Vercel dashboard</span>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">4 hrs ago</div>
+          <div class="mission-page-count">2</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+
+      <!-- Mission 3: Voice AI Research -->
+      <div class="mission-card" id="mission-voice">
+        <div class="status-bar active"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">Voice AI Agents Research</span>
+            <span class="mission-tag active">Active</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              4 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Watching videos on LiveKit agents with Gemini Live API, and Peter Steinberger's OpenClaw talk. Exploring voice-based AI interfaces.</div>
+          <div class="mission-pages">
+            <span class="page-chip">Building LiveKit Agents with Gemini</span>
+            <span class="page-chip">Peter Steinberger, OpenClaw</span>
+            <span class="page-chip">YouTube Watch Later</span>
+            <span class="page-chip">livekit.io/docs</span>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">2 hrs ago</div>
+          <div class="mission-page-count">4</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+
+      <!-- Mission 4: Frontend Slides PRs -->
+      <div class="mission-card" id="mission-slides">
+        <div class="status-bar cooling"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">Frontend Slides &mdash; PR Review</span>
+            <span class="mission-tag cooling">1 day</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              5 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Two open PRs for Claude Code marketplace support. Last looked at PR #43 and #26. Haven't merged or commented yet.</div>
+          <div class="mission-pages">
+            <span class="page-chip">PR #43: Claude Code marketplace</span>
+            <span class="page-chip">PR #26: Cursor plugin support</span>
+            <span class="page-chip">Issues &middot; frontend-slides</span>
+            <span class="page-chip">frontend-slides repo</span>
+            <span class="page-chip">GitHub notifications</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" /></svg>
+              Focus on this
+            </button>
+            <button class="action-btn close-tabs" onclick="closeTabs(this, 'slides', 5)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+              Close 5 tabs
+            </button>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">yesterday</div>
+          <div class="mission-page-count">5</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abandoned Missions -->
+  <div class="abandoned-section">
+    <div class="section-header">
+      <h2>Gone cold</h2>
+      <div class="section-line"></div>
+      <div class="section-count">3 missions</div>
+    </div>
+
+    <div class="missions">
+      <!-- Abandoned 1: Phota Studio -->
+      <div class="mission-card" id="mission-phota">
+        <div class="status-bar abandoned"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">Phota Studio AI Portraits</span>
+            <span class="mission-tag abandoned">1 day</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              9 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Deep session creating AI portraits &mdash; browsed Pinterest for toddler photography poses, pulled photos from Google Photos, made "Zara with a Pearl Earring." Posted to X but didn't finish exploring all the edits.</div>
+          <div class="mission-pages">
+            <span class="page-chip">Phota Studio (12 edits)</span>
+            <span class="page-chip">Pinterest: toddler photography</span>
+            <span class="page-chip">Girl with a Pearl Earring</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" /></svg>
+              Pick back up
+            </button>
+            <button class="action-btn close-tabs" onclick="closeTabs(this, 'phota', 9)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+              Close &amp; archive
+            </button>
+            <button class="action-btn danger" onclick="dismissMission(this)">Let it go</button>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">yesterday</div>
+          <div class="mission-page-count">18</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+
+      <!-- Abandoned 2: ByteDance Brainstorm -->
+      <div class="mission-card" id="mission-bytedance">
+        <div class="status-bar abandoned"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">ByteDance &mdash; Agent Meeting Brainstorm</span>
+            <span class="mission-tag abandoned">2 days</span>
+            <span class="open-tabs-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18" /></svg>
+              2 tabs open
+            </span>
+          </div>
+          <div class="mission-summary">Working on Lark doc about AI agent meeting scenarios. Opened the doc, made a copy, but stopped mid-way.</div>
+          <div class="mission-pages">
+            <span class="page-chip">Lark: 智能体入会 Brainstorm</span>
+            <span class="page-chip">Lark: 副本 (copy)</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" /></svg>
+              Pick back up
+            </button>
+            <button class="action-btn close-tabs" onclick="closeTabs(this, 'bytedance', 2)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+              Close &amp; archive
+            </button>
+            <button class="action-btn danger" onclick="dismissMission(this)">Let it go</button>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">2 days ago</div>
+          <div class="mission-page-count">3</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+
+      <!-- Abandoned 3: Design Systems -->
+      <div class="mission-card" id="mission-design">
+        <div class="status-bar abandoned"></div>
+        <div class="mission-content">
+          <div class="mission-top">
+            <span class="mission-name">DESIGN.md Research</span>
+            <span class="mission-tag abandoned">2 days</span>
+          </div>
+          <div class="mission-summary">Found VoltAgent's awesome-design-md repo from a bookmarked X post about Google Stitch. Saved it but never explored further. <em>No tabs still open.</em></div>
+          <div class="mission-pages">
+            <span class="page-chip">VoltAgent/awesome-design-md</span>
+            <span class="page-chip">X: DESIGN.md concept</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" /></svg>
+              Pick back up
+            </button>
+            <button class="action-btn danger" onclick="dismissMission(this)">Let it go</button>
+          </div>
+        </div>
+        <div class="mission-meta">
+          <div class="mission-time">2 days ago</div>
+          <div class="mission-page-count">2</div>
+          <div class="mission-page-label">pages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-stats">
+      <div class="stat">
+        <div class="stat-num" id="statMissions">7</div>
+        <div class="stat-label">Missions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statTabs">25</div>
+        <div class="stat-label">Open tabs</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statStale">11</div>
+        <div class="stat-label">Stale tabs</div>
+      </div>
+    </div>
+    <div class="last-refresh">
+      Last analyzed 5 min ago &nbsp;&middot;&nbsp; <button class="refresh-btn">Refresh now</button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+  </svg>
+  <span id="toastText"></span>
+</div>
+
+<script>
+  /* ---- Demo interactivity for the mockup ---- */
+
+  let totalStale = 11;
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastText').textContent = message;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 2500);
+  }
+
+  function closeTabs(btn, missionId, count) {
+    /* In the real extension, this calls chrome.tabs.remove() */
+    /* For the mockup, we animate the badge away and show a toast */
+
+    const card = btn.closest('.mission-card');
+    const badge = card.querySelector('.open-tabs-badge');
+    if (badge) {
+      badge.style.transition = 'opacity 0.3s, transform 0.3s';
+      badge.style.opacity = '0';
+      badge.style.transform = 'scale(0.8)';
+      setTimeout(() => badge.remove(), 300);
+    }
+
+    /* Remove the close button */
+    btn.style.transition = 'opacity 0.2s';
+    btn.style.opacity = '0';
+    setTimeout(() => btn.remove(), 200);
+
+    /* Update stale count */
+    totalStale = Math.max(0, totalStale - count);
+    document.getElementById('statStale').textContent = totalStale;
+    document.getElementById('statTabs').textContent = 25 - (11 - totalStale);
+
+    if (totalStale <= 0) {
+      const banner = document.getElementById('cleanupBanner');
+      banner.style.transition = 'opacity 0.4s, max-height 0.4s, margin 0.4s, padding 0.4s';
+      banner.style.opacity = '0';
+      banner.style.maxHeight = '0';
+      banner.style.marginBottom = '0';
+      banner.style.padding = '0 24px';
+      banner.style.overflow = 'hidden';
+    } else {
+      document.getElementById('staleTabCount').textContent = totalStale + ' stale tab' + (totalStale !== 1 ? 's' : '');
+    }
+
+    showToast('Closed ' + count + ' tab' + (count !== 1 ? 's' : '') + ' from ' + card.querySelector('.mission-name').textContent);
+  }
+
+  function dismissMission(btn) {
+    const card = btn.closest('.mission-card');
+    const badge = card.querySelector('.open-tabs-badge');
+    const tabMatch = badge ? badge.textContent.match(/(\d+)/) : null;
+    const tabCount = tabMatch ? parseInt(tabMatch[1]) : 0;
+
+    card.classList.add('closing');
+
+    if (tabCount > 0) {
+      totalStale = Math.max(0, totalStale - tabCount);
+      document.getElementById('statStale').textContent = totalStale;
+      document.getElementById('statTabs').textContent = 25 - (11 - totalStale);
+    }
+
+    setTimeout(() => {
+      card.style.display = 'none';
+      showToast('Dismissed "' + card.querySelector('.mission-name').textContent + '"');
+    }, 400);
+  }
+
+  function closeAllStale() {
+    /* Close all stale tabs at once */
+    document.querySelectorAll('.abandoned-section .open-tabs-badge').forEach(badge => {
+      badge.style.transition = 'opacity 0.3s';
+      badge.style.opacity = '0';
+      setTimeout(() => badge.remove(), 300);
+    });
+
+    document.querySelectorAll('.abandoned-section .action-btn.close-tabs').forEach(btn => {
+      btn.style.transition = 'opacity 0.2s';
+      btn.style.opacity = '0';
+      setTimeout(() => btn.remove(), 200);
+    });
+
+    /* Also close cooling mission stale tabs */
+    document.querySelectorAll('.active-section .mission-card').forEach(card => {
+      const tag = card.querySelector('.mission-tag.cooling');
+      if (tag) {
+        const badge = card.querySelector('.open-tabs-badge');
+        const closeBtn = card.querySelector('.action-btn.close-tabs');
+        if (badge) {
+          badge.style.transition = 'opacity 0.3s';
+          badge.style.opacity = '0';
+          setTimeout(() => badge.remove(), 300);
+        }
+        if (closeBtn) {
+          closeBtn.style.transition = 'opacity 0.2s';
+          closeBtn.style.opacity = '0';
+          setTimeout(() => closeBtn.remove(), 200);
+        }
+      }
+    });
+
+    const closedCount = totalStale;
+    totalStale = 0;
+    document.getElementById('statStale').textContent = '0';
+    document.getElementById('statTabs').textContent = 25 - closedCount;
+
+    const banner = document.getElementById('cleanupBanner');
+    banner.style.transition = 'opacity 0.4s, max-height 0.4s ease 0.2s, margin 0.4s ease 0.2s, padding 0.4s ease 0.2s';
+    banner.style.opacity = '0';
+    setTimeout(() => {
+      banner.style.maxHeight = '0';
+      banner.style.marginBottom = '0';
+      banner.style.padding = '0 24px';
+      banner.style.overflow = 'hidden';
+    }, 200);
+
+    showToast('Closed ' + closedCount + ' stale tabs. Breathing room restored.');
+  }
+</script>
+</body>
+</html>
