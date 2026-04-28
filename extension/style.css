@@ -1156,3 +1156,50 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   opacity: 0.6;
   flex-shrink: 0;
 }
+
+/* ================================================================
+   DRAG & DROP — Tab chip to "Saved for Later"
+   ================================================================ */
+
+/* Tab chip being dragged — dimmed so user sees it's "picked up" */
+.page-chip.dragging {
+  opacity: 0.35;
+  transform: scale(0.95);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+/* Deferred column: force visible as a drop target during drag */
+.deferred-column.drag-target-active {
+  display: block !important;
+  min-height: 120px;
+}
+
+/* Deferred column: highlighted when a chip hovers over it */
+.deferred-column.drag-over {
+  background: rgba(90, 122, 98, 0.06);
+  outline: 2px dashed var(--accent-sage);
+  outline-offset: -2px;
+  border-radius: 8px;
+  transition: background 0.2s, outline-color 0.2s;
+}
+
+/* Floating ghost element that follows the cursor during drag */
+.drag-ghost {
+  position: fixed;
+  transform: translate(-50%, -120%);
+  background: var(--card-bg);
+  border: 1px solid var(--accent-sage);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: 9999;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.92;
+}

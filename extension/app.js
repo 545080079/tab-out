@@ -495,10 +495,15 @@ function timeAgo(dateStr) {
  * getGreeting() — "Good morning / afternoon / evening"
  */
 function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  const now  = new Date();
+  const hour = now.getHours();
+  const mins = now.getMinutes().toString().padStart(2, '0');
+  const timeStr = `${hour}:${mins}`;
+  let greeting;
+  if (hour < 12) greeting = 'Good morning';
+  else if (hour < 17) greeting = 'Good afternoon';
+  else greeting = 'Good evening';
+  return `${greeting}, ${timeStr}`;
 }
 
 /**
@@ -768,7 +773,7 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
@@ -849,7 +854,7 @@ function renderDomainCard(group) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
@@ -1182,6 +1187,9 @@ async function renderDashboard() {
    ---------------------------------------------------------------- */
 
 document.addEventListener('click', async (e) => {
+  // Skip click if it was triggered after a drag-and-drop
+  if (_dragDidOccur) return;
+
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
@@ -1474,6 +1482,217 @@ document.addEventListener('input', async (e) => {
     console.warn('[tab-out] Archive search failed:', err);
   }
 });
+
+
+/* ----------------------------------------------------------------
+   DRAG & DROP — Custom long-press drag to "Saved for Later"
+
+   Users can long-press (200ms) or press-and-move a tab chip to
+   drag it onto the "Saved for Later" column. This uses custom
+   mouse events instead of native HTML5 DnD to avoid conflicts
+   with the click-to-focus behavior on tab chips.
+   ---------------------------------------------------------------- */
+
+let _dragState = null;
+let _dragDidOccur = false;
+
+// --- mousedown: begin tracking a potential drag ---
+document.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  if (e.target.closest('.chip-actions')) return;
+
+  const chip = e.target.closest('.page-chip[data-action="focus-tab"]');
+  if (!chip) return;
+
+  const tabUrl   = chip.dataset.tabUrl;
+  const tabTitle = chip.dataset.tabTitle || chip.querySelector('.chip-text')?.textContent || tabUrl;
+
+  _dragState = {
+    chip, url: tabUrl, title: tabTitle,
+    startX: e.clientX, startY: e.clientY,
+    active: false, wasHidden: false, ghost: null, timer: null,
+  };
+
+  // Activate drag after 200ms hold
+  _dragState.timer = setTimeout(() => {
+    if (_dragState && !_dragState.active) {
+      _activateDrag(_dragState.startX, _dragState.startY);
+    }
+  }, 200);
+});
+
+// --- mousemove: activate or update drag ---
+document.addEventListener('mousemove', (e) => {
+  if (!_dragState) return;
+
+  if (!_dragState.active) {
+    // Activate drag if mouse moves more than 8px
+    const dx = Math.abs(e.clientX - _dragState.startX);
+    const dy = Math.abs(e.clientY - _dragState.startY);
+    if (dx + dy > 8) {
+      clearTimeout(_dragState.timer);
+      _activateDrag(e.clientX, e.clientY);
+    }
+    return;
+  }
+
+  // Move ghost element
+  _dragState.ghost.style.left = e.clientX + 'px';
+  _dragState.ghost.style.top  = e.clientY + 'px';
+
+  // Highlight deferred column when hovering over it
+  const column = document.getElementById('deferredColumn');
+  if (column) {
+    const rect = column.getBoundingClientRect();
+    const isOver = e.clientX >= rect.left && e.clientX <= rect.right &&
+                   e.clientY >= rect.top  && e.clientY <= rect.bottom;
+    column.classList.toggle('drag-over', isOver);
+  }
+});
+
+// --- mouseup: drop or cancel ---
+document.addEventListener('mouseup', async (e) => {
+  if (!_dragState) return;
+  clearTimeout(_dragState.timer);
+
+  if (!_dragState.active) {
+    // Was a regular click — let the click handler deal with it
+    _dragState = null;
+    return;
+  }
+
+  // Flag to suppress the click event that fires after mouseup
+  _dragDidOccur = true;
+  setTimeout(() => { _dragDidOccur = false; }, 0);
+
+  const { url, title, chip } = _dragState;
+
+  // Check if dropped over the deferred column
+  const column = document.getElementById('deferredColumn');
+  let dropped = false;
+  if (column) {
+    const rect = column.getBoundingClientRect();
+    dropped = e.clientX >= rect.left && e.clientX <= rect.right &&
+              e.clientY >= rect.top  && e.clientY <= rect.bottom;
+  }
+
+  if (dropped) {
+    // --- Perform save + close (same as bookmark button) ---
+    // Clean up drag visuals first so the column is ready for re-render
+    const wasHidden = _dragState.wasHidden;
+    _cleanupDrag();
+
+    try {
+      await saveTabForLater({ url, title });
+    } catch (err) {
+      console.error('[tab-out] Failed to save tab via drag:', err);
+      showToast('Failed to save tab');
+      return;
+    }
+
+    // Close the Chrome tab
+    const allTabs = await chrome.tabs.query({});
+    const match   = allTabs.find(t => t.url === url);
+    if (match) await chrome.tabs.remove(match.id);
+    await fetchOpenTabs();
+
+    // Sound + confetti at drop point
+    playCloseSound();
+    shootConfetti(e.clientX, e.clientY);
+
+    // Animate the source chip out
+    chip.style.transition = 'opacity 0.2s, transform 0.2s';
+    chip.style.opacity    = '0';
+    chip.style.transform  = 'scale(0.8)';
+    setTimeout(() => {
+      chip.remove();
+      document.querySelectorAll('.mission-card').forEach(c => {
+        if (c.querySelectorAll('.page-chip[data-action="focus-tab"]').length === 0) {
+          animateCardOut(c);
+        }
+      });
+    }, 200);
+
+    const statTabs = document.getElementById('statTabs');
+    if (statTabs) statTabs.textContent = openTabs.length;
+
+    showToast('Saved for later');
+    await renderDeferredColumn();
+  } else {
+    _cleanupDrag();
+  }
+});
+
+/**
+ * _activateDrag(x, y)
+ *
+ * Transitions from "potential drag" to "active drag": dims the source
+ * chip, creates a floating ghost element, and reveals the drop target.
+ */
+function _activateDrag(x, y) {
+  if (!_dragState || _dragState.active) return;
+  _dragState.active = true;
+
+  // Dim the source chip
+  _dragState.chip.classList.add('dragging');
+
+  // Create ghost element that follows the cursor
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  const favicon = _dragState.chip.querySelector('.chip-favicon');
+  const text    = _dragState.chip.querySelector('.chip-text')?.textContent || '';
+  ghost.innerHTML = (favicon
+    ? `<img src="${favicon.src}" style="width:14px;height:14px;border-radius:2px;vertical-align:-2px;margin-right:6px" onerror="this.style.display='none'">`
+    : '') + text;
+  ghost.style.left = x + 'px';
+  ghost.style.top  = y + 'px';
+  document.body.appendChild(ghost);
+  _dragState.ghost = ghost;
+
+  // Show deferred column as drop target (even if it was hidden)
+  const column = document.getElementById('deferredColumn');
+  if (column) {
+    _dragState.wasHidden = column.style.display === 'none';
+    column.classList.add('drag-target-active');
+
+    if (_dragState.wasHidden) {
+      const list  = document.getElementById('deferredList');
+      const empty = document.getElementById('deferredEmpty');
+      if (list) list.style.display = 'none';
+      if (empty) {
+        empty.textContent = 'Drop here to save for later';
+        empty.style.display = 'block';
+      }
+    }
+  }
+
+  // Prevent text selection while dragging
+  document.body.style.userSelect = 'none';
+}
+
+/**
+ * _cleanupDrag()
+ *
+ * Removes all drag visual state: ghost element, chip dimming,
+ * column highlight, and selection lock.
+ */
+function _cleanupDrag() {
+  if (!_dragState) return;
+
+  _dragState.chip.classList.remove('dragging');
+  if (_dragState.ghost) _dragState.ghost.remove();
+
+  const column = document.getElementById('deferredColumn');
+  if (column) {
+    column.classList.remove('drag-over', 'drag-target-active');
+    if (_dragState.wasHidden) {
+      renderDeferredColumn();
+    }
+  }
+
+  document.body.style.userSelect = '';
+  _dragState = null;
+}
 
 
 /* ----------------------------------------------------------------
